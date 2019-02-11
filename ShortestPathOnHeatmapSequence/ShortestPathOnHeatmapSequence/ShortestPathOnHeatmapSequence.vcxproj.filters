@@ -24,6 +24,9 @@
     <ClInclude Include="MyForm.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="ShortestPathForHeatMap.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -38,6 +41,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="MyForm.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="ShortestPathForHeatMap.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

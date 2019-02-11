@@ -56,7 +56,10 @@ static bool t_showOpenFileDlg_multi
   dlg->Filter = gcnew System::String(filter);
   dlg->Multiselect = true;
 
+  
   if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::Cancel) return false;
+
+  printf("aaa");
 
   std::vector<std::pair<std::string, std::string>> vec_fname_date;
 
@@ -99,7 +102,7 @@ static bool t_showSaveFileDlg
 
 
 
-
+[STAThreadAttribute]
 int main(array<System::String ^> ^args)
 {
   printf("start shortest path on heat map sequene\n");
@@ -107,6 +110,7 @@ int main(array<System::String ^> ^args)
   //1. get input_files_names and output_file_path 
   std::vector< std::string > input_heatmap_paths;
   std::string output_csv_path;
+  
   if( !t_showOpenFileDlg_multi("heatmap sequence (*.png)|*.png", input_heatmap_paths) ) return 0;   
   if( !t_showSaveFileDlg      ("landmark sequence(*.csv)|*.csv", output_csv_path    ) ) return 0;   
 
