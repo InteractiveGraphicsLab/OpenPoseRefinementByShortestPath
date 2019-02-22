@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 
 #pragma managed
 
@@ -13,12 +15,11 @@ inline bool t_loadOpenPoseHeatmaps
     unsigned char **heatmaps //allocated
 )
 {
-
   System::String ^s            = gcnew System::String(fname);
   System::Drawing::Image^ img  = System::Drawing::Image::FromFile(s);
   System::Drawing::Bitmap^ bmp = gcnew System::Drawing::Bitmap(img);
 
-  if (bmp->Width != W * heatmapN || bmp->Height == H ) return false;
+  if (bmp->Width != W * heatmapN || bmp->Height != H ) return false;
   
   System::Drawing::Imaging::BitmapData ^bmpData =
     bmp->LockBits(System::Drawing::Rectangle(0, 0, W, H),
@@ -30,6 +31,8 @@ inline bool t_loadOpenPoseHeatmaps
   //‹P“x’l‚ÌŽæ“¾AÝ’è 
   if ( bmp->PixelFormat == System::Drawing::Imaging::PixelFormat::Format8bppIndexed )
   {
+    std::cout << "8 bit image" << std::endl;
+
     for (int y = 0; y < H; y++)
     {
       for ( int hmI = 0; hmI < heatmapN; ++hmI )
@@ -45,6 +48,7 @@ inline bool t_loadOpenPoseHeatmaps
   else if ( bmp->PixelFormat == System::Drawing::Imaging::PixelFormat::Format24bppRgb ||
             bmp->PixelFormat == System::Drawing::Imaging::PixelFormat::Format32bppArgb)
   {
+    std::cout << "24 bit image" << std::endl;
     //24bit BGRBGRBGR...   32bit BGRA BGRABGRA...
     int BitCount = bmp->GetPixelFormatSize(bmp->PixelFormat);
     int Step = BitCount / 8;
@@ -63,12 +67,13 @@ inline bool t_loadOpenPoseHeatmaps
   }
   else
   {
-    printf("-------------------------error unknown format \n");
+    std::cout << "-------------------------error unknown format" << std::endl;
     return false;
   }
 
-
   bmp->UnlockBits(bmpData);
+  img = nullptr;
+  bmp = nullptr;
   return true;
 }
 
@@ -120,3 +125,44 @@ inline void t_saveImage(
 }
 
 
+inline void t_saveImage_gray(
+  const char *fname,
+  const int &W,
+  const int &H,
+  const unsigned char* img)
+{
+
+  System::Drawing::Bitmap^ bmp = gcnew System::Drawing::Bitmap(W, H, System::Drawing::Imaging::PixelFormat::Format32bppRgb);
+
+  System::Drawing::Imaging::BitmapData ^bmpData = bmp->LockBits(
+      System::Drawing::Rectangle(0, 0, W, H),
+      System::Drawing::Imaging::ImageLockMode::WriteOnly,
+      bmp->PixelFormat);
+
+  unsigned char* pBuf = (unsigned char*)bmpData->Scan0.ToPointer();
+
+
+  //32bit BGRA BGRABGRA...
+
+  int BitNum = bmp->GetPixelFormatSize(bmp->PixelFormat);
+  int Step = BitNum / 8;
+
+  for (int y = 0; y < H; y++)
+  {
+    for (int x = 0; x < W; x++)
+    {
+      const int I = x + y*W;
+      pBuf[x * Step + 0 + y * bmpData->Stride] = img[I]; //B 
+      pBuf[x * Step + 1 + y * bmpData->Stride] = img[I]; //G 
+      pBuf[x * Step + 2 + y * bmpData->Stride] = img[I]; //R
+    }
+  }
+
+  System::String ^fname_str = gcnew System::String(fname);
+  System::String ^ext = System::IO::Path::GetExtension(fname_str)->ToLower();
+
+  if (ext == ".bmp") bmp->Save(fname_str, System::Drawing::Imaging::ImageFormat::Bmp);
+  else if (ext == ".jpg") bmp->Save(fname_str, System::Drawing::Imaging::ImageFormat::Jpeg);
+  else if (ext == ".png") bmp->Save(fname_str, System::Drawing::Imaging::ImageFormat::Png);
+  else if (ext == ".tif") bmp->Save(fname_str, System::Drawing::Imaging::ImageFormat::Tiff);
+}

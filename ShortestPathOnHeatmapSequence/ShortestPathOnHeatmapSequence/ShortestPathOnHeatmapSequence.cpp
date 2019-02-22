@@ -2,11 +2,12 @@
 
 #include "windows.h"
 #include "MyForm.h"
-#include <stdio.h>
+#include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <algorithm>
-
+#include "ShortestPathForHeatMap.h"
 
 using namespace System;
 using namespace System::IO;
@@ -18,7 +19,7 @@ using namespace System::Windows::Forms;
 using namespace System::Data;
 
 
-
+using namespace std;
 
 
 static void n_marshalString(String ^ s, std::string& os) {
@@ -59,7 +60,6 @@ static bool t_showOpenFileDlg_multi
   
   if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::Cancel) return false;
 
-  printf("aaa");
 
   std::vector<std::pair<std::string, std::string>> vec_fname_date;
 
@@ -102,10 +102,18 @@ static bool t_showSaveFileDlg
 
 
 
+
+
+// Export key points
+// nose, leye, reye, lear, rear, lShoulder, rshoulder, leftElbow, rightElbow, 
+// leftWrist, rightWrist, leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle
+//
+
+
 [STAThreadAttribute]
-int main(array<System::String ^> ^args)
+int main()
 {
-  printf("start shortest path on heat map sequene\n");
+  std::cout << "start shortest path on heat map sequene" << std::endl;
   
   //1. get input_files_names and output_file_path 
   std::vector< std::string > input_heatmap_paths;
@@ -115,10 +123,29 @@ int main(array<System::String ^> ^args)
   if( !t_showSaveFileDlg      ("landmark sequence(*.csv)|*.csv", output_csv_path    ) ) return 0;   
 
   //2. compute shortest path
-    
+  std::vector< std::vector<Point2i> > points_sequence;
+  computeLandmarkSequenceByHeatmaps(input_heatmap_paths, points_sequence);
 
   //3. output csv file
 
+  ofstream ofile;
+  ofile.open(output_csv_path.c_str(), std::ios::out);
+  ofile << "0,16,15,18,17,5,2,6,3,7,4,12,9,13,10,14,11" << endl;
 
+  int trgt_keyID[17] = {0,16,15,18,17,5,2,6,3,7,4,12,9,13,10,14,11};
+  for ( const auto &keypoints : points_sequence )
+  {
+    for ( int k = 0; k < 17; ++k )
+    {
+      int keyid = trgt_keyID[ k ];
+      ofile << keypoints[keyid].data[0] << "," << keypoints[keyid].data[1] << "," << 1.0;
+      if( k == 16 ) ofile << std::endl;
+      else          ofile << ",";
+    }
+    ofile << endl;
+  }
+
+  ofile.close();
+  
   return 0;
 }
