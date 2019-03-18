@@ -2,12 +2,13 @@
 #include "timageloader.h"
 
 #include <time.h>
+#include <fstream>
 #include <iostream>
 #include <algorithm>
 using namespace std;
 
 
-#define IMG_WIDTH    656
+#define IMG_WIDTH    496
 #define IMG_HEIGHT   368
 #define KEYPOINT_NUM 25
 
@@ -81,7 +82,7 @@ Point2i t_getMaxXY(const int W, const int H, const float *enegymap)
       }
     }
   }
-  cout << "t_getMAXXY  " << maxV << " " << xy[0] << " " << xy[1] << " " << endl;
+  //cout << "t_getMAXXY  " << maxV << " " << xy[0] << " " << xy[1] << " " << endl;
   return xy;
 }
 
@@ -148,7 +149,7 @@ void t_computeLandmarkSequenceByHeatMap
   {
     time_t t0 = clock(); 
     t_loadOpenPoseHeatmaps(fnames[f].c_str(), W, H, KEYPOINT_NUM, heatMaps);
-    cout << endl << "img" << f <<  endI << (int)fnames.size() << frameN << endl;
+    cout << "--img--" << f << " " << (int)fnames.size() << " " << frameN << endl;
 
     time_t t1 = clock(); 
 
@@ -156,7 +157,7 @@ void t_computeLandmarkSequenceByHeatMap
     for( int k=0; k < KEYPOINT_NUM; ++k)
     {
       byte*  heat  = heatMaps   [k];
-      byte*  from  = fromMaps[f][k];
+      byte*  from  = fromMaps[f-startI][k];
       float* engy  = engyMaps   [k];
       float* engyP = engyMapsPre[k];
       t_stepDP( W, H, heat, engyP, engy, from);
@@ -192,8 +193,8 @@ void t_computeLandmarkSequenceByHeatMap
       xy[0] += fromX;
       xy[1] += fromY;
       
-      cout << fromX << " " << fromY << " ";
-      cout << xy[0] << " " << xy[1] << endl;
+      //cout << fromX << " " << fromY << " ";
+      //cout << xy[0] << " " << xy[1] << endl;
     }
   }
   cout << "path computation done" << endl;
@@ -218,9 +219,13 @@ void t_computeLandmarkSequenceByHeatMap
 
 
 
+static const char* FIRST_LINE = "nose_x,nose_y,nose_confidence,leftEye_x,leftEye_y,leftEye_confidence,rightEye_x,rightEye_y,rightEye_confidence,leftEar_x,leftEar_y,leftEar_confidence,rightEar_x,rightEar_y,rightEar_confidence,leftShoulder_x,leftShoulder_y,leftShoulder_confidence,rightShoulder_x,rightShoulder_y,rightShoulder_confidence,leftElbow_x,leftElbow_y,leftElbow_confidence,rightElbow_x,rightElbow_y,rightElbow_confidence,leftWrist_x,leftWrist_y,leftWrist_confidence,rightWrist_x,rightWrist_y,rightWrist_confidence,leftHip_x,leftHip_y,leftHip_confidence,rightHip_x,rightHip_y,rightHip_confidence,leftKnee_x,leftKnee_y,leftKnee_confidence,rightKnee_x,rightKnee_y,rightKnee_confidence,leftAnkle_x,leftAnkle_y,leftAnkle_confidence,rightAnkle_x,rightAnkle_y,rightAnkle_confidence";
+
+
 bool computeLandmarkSequenceByHeatmaps
 (
     const std::vector<std::string> &fnames,
+    const std::string output_file_path,
     std::vector<std::vector<Point2i>>  &points_sequence // [frameIdx][landmarkId]            
 )
 {
@@ -240,20 +245,40 @@ bool computeLandmarkSequenceByHeatmaps
 
 
 
+  //1000枚ごとに計算し，csv出力を行う
+  const int KEYIDs[17] = {0,16,15,18,17,5,2,6,3,7,4,12,9,13,10,14,11};
+  std::ofstream ofile;
+  ofile.open(output_file_path.c_str(), std::ios::out);
+  ofile << FIRST_LINE << "\n";
 
-  const int SEQUENCE_BUNCH_NUM = 1000; //600 * 800 * 25 * 1000 
-  
+
+
+  const int SEQUENCE_BUNCH_NUM = 1000; //600 * 800 * 25 * 1000   
   points_sequence.clear();
 
   for( int i=0; i < (int)fnames.size(); i += SEQUENCE_BUNCH_NUM)
   {
+    //計算
     const int startI = i;
     const int endI   = std::min( i + SEQUENCE_BUNCH_NUM , (int)fnames.size() );
     std::vector<std::vector<Point2i>> points_seq;
     t_computeLandmarkSequenceByHeatMap ( fnames, startI, endI, points_seq);
+  
+    //csv書き出し
+    for ( const auto &points : points_seq )
+    {
+      for ( int k = 0; k < 17; ++k )
+      {
+        ofile << points[KEYIDs[ k ]].data[0] << "," << points[KEYIDs[ k ]].data[1] << "," << 1.0;
+        if( k != 16 ) ofile << ",";
+      }
+      ofile << "\n";
+    }
 
+    //結果の配列に追加
     for( const auto &it : points_seq) points_sequence.push_back(it);
   }
-  
+
+  ofile.close();
   return true;
 }

@@ -72,6 +72,8 @@ inline bool t_loadOpenPoseHeatmaps
   }
 
   bmp->UnlockBits(bmpData);
+  delete(img);
+  delete(bmp);
   img = nullptr;
   bmp = nullptr;
   return true;

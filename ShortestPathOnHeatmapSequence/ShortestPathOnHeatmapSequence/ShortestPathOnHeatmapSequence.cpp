@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <filesystem> 
 #include "ShortestPathForHeatMap.h"
 
 using namespace System;
@@ -18,8 +19,6 @@ using namespace System::Collections;
 using namespace System::Windows::Forms;
 using namespace System::Data;
 
-
-using namespace std;
 
 
 static void n_marshalString(String ^ s, std::string& os) {
@@ -104,48 +103,90 @@ static bool t_showSaveFileDlg
 
 
 
+
+
+static bool isJpgFile(const std::string &fname)
+{
+  int flen = (int)fname.length();
+  if ( flen < 4 ) return false;
+  std::string ex = fname.substr(flen-4, flen );
+  
+  return strcmp( ex.c_str(), ".png") == 0 || 
+         strcmp( ex.c_str(), ".PNG") == 0 ||
+         strcmp( ex.c_str(), ".Png") == 0;
+
+}
+
+
+static std::vector<std::string> getAllPngFileInDir( std::string _path )
+{
+  std::vector<std::string> child_img_files;
+  std::tr2::sys::path parent_path( _path ); 
+
+  for(std::tr2::sys::path p : std::tr2::sys::directory_iterator(parent_path))
+  {
+    if ( std::tr2::sys::is_regular_file(p) && isJpgFile(p.filename().string() ) )
+    { 
+      child_img_files.push_back(_path + "/" + p.filename().string());
+    } 
+  }
+  return child_img_files;
+}
+
+
+
+
+
+
+
 // Export key points
 // nose, leye, reye, lear, rear, lShoulder, rshoulder, leftElbow, rightElbow, 
 // leftWrist, rightWrist, leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle
 //
 
 
+
+
+
+
+
+
 [STAThreadAttribute]
-int main()
+int main(array<System::String ^> ^args)
 {
-  std::cout << "start shortest path on heat map sequene" << std::endl;
+  std::cout << "------------------------ USEAGE ----------------------" << std::endl;
+  std::cout << "$ShortestPathOnHeatmap.exe  dir_name  csv_file_name   " << std::endl;
+  std::cout << "or " << std::endl;
+  std::cout << "set heatmap_Path and csv_filename by Dialog" << std::endl;
+  std::cout << "コンソールからヒートマップが入ったフォルダパスと出力ファイル名を指定して起動できます．" << std::endl;
+  std::cout << "または，起動後にダイアログより入力・出力ファイルを指定できます．" << std::endl;
+    
+
   
   //1. get input_files_names and output_file_path 
   std::vector< std::string > input_heatmap_paths;
   std::string output_csv_path;
+
+  if( args->Length >=2 )
+  {
+	  IntPtr mptr1 = Marshal::StringToHGlobalAnsi(args[0]);
+    std::string dir_path = static_cast<const char*>(mptr1.ToPointer());
+    input_heatmap_paths = getAllPngFileInDir(dir_path.c_str());
+
+	  IntPtr mptr2 = Marshal::StringToHGlobalAnsi(args[1]);
+    output_csv_path = static_cast<const char*>(mptr2.ToPointer());
+  }
+  if( input_heatmap_paths.size() == 0 ){
+    if( !t_showOpenFileDlg_multi("heatmap sequence (*.png)|*.png", input_heatmap_paths) ) return 0;   
+    if( !t_showSaveFileDlg      ("landmark sequence(*.csv)|*.csv", output_csv_path    ) ) return 0;
+  }
   
-  if( !t_showOpenFileDlg_multi("heatmap sequence (*.png)|*.png", input_heatmap_paths) ) return 0;   
-  if( !t_showSaveFileDlg      ("landmark sequence(*.csv)|*.csv", output_csv_path    ) ) return 0;   
+  std::cout << "file size  " << input_heatmap_paths.size() << "\n";
+  
 
   //2. compute shortest path
   std::vector< std::vector<Point2i> > points_sequence;
-  computeLandmarkSequenceByHeatmaps(input_heatmap_paths, points_sequence);
-
-  //3. output csv file
-
-  ofstream ofile;
-  ofile.open(output_csv_path.c_str(), std::ios::out);
-  ofile << "0,16,15,18,17,5,2,6,3,7,4,12,9,13,10,14,11" << endl;
-
-  int trgt_keyID[17] = {0,16,15,18,17,5,2,6,3,7,4,12,9,13,10,14,11};
-  for ( const auto &keypoints : points_sequence )
-  {
-    for ( int k = 0; k < 17; ++k )
-    {
-      int keyid = trgt_keyID[ k ];
-      ofile << keypoints[keyid].data[0] << "," << keypoints[keyid].data[1] << "," << 1.0;
-      if( k == 16 ) ofile << std::endl;
-      else          ofile << ",";
-    }
-    ofile << endl;
-  }
-
-  ofile.close();
+  computeLandmarkSequenceByHeatmaps(input_heatmap_paths, output_csv_path, points_sequence);
   
   return 0;
 }

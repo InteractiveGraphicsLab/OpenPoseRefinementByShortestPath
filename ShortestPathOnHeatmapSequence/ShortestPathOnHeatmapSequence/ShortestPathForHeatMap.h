@@ -37,6 +37,7 @@ public:
 bool computeLandmarkSequenceByHeatmaps
 (
     const std::vector<std::string> &fnames,
+    const std::string output_file_path,
     std::vector<std::vector<Point2i>>  &points_sequence // [frameIdx][landmarkId]            
 );
 
